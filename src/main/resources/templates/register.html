@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+    <head>
+        <title>Register - Secure WebApp</title>
+    </head>
+    <body>
+        <h1>Create Account</h1>
+        <div th:if="${error}" style="color: red;">
+            <p th:text="${error}"></p>
+        </div>
+        <form th:action="@{/register}" method="post">
+            <div>
+                <label>Username: <input type="text" name="username" required/></label>
+            </div>
+            <div>
+                <label>Password: <input type="password" name="password" id="password" required/></label>
+            </div>
+            <div>
+                <label>Confirm Password: <input type="password" id="confirmPassword" required/></label>
+            </div>
+            <div>
+                <input type="submit" value="Register" onclick="return validatePasswords()"/>
+            </div>
+        </form>
+        <p>Already have an account? <a th:href="@{/login}">Sign in</a></p>
+        <script>
+            function validatePasswords() {
+                var pw = document.getElementById('password').value;
+                var cpw = document.getElementById('confirmPassword').value;
+                if (pw !== cpw) {
+                    alert('Passwords do not match.');
+                    return false;
+                }
+                return true;
+            }
+        </script>
+    </body>
+</html>

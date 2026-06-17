@@ -1,13 +1,15 @@
 # WebApp - Secure Spring Boot Web Application
 
-A Spring Boot web application with integrated security features, built with Spring Security and Thymeleaf templating engine.
+A Spring Boot web application with integrated security features, built with Spring Security, Thymeleaf templating engine, and SQLite-backed user persistence.
 
 ## Project Overview
 
 This project demonstrates a secure web application using Spring Boot with the following features:
 - **Spring Security**: Form-based authentication and authorization
 - **Thymeleaf**: Server-side template rendering
-- **In-Memory Authentication**: Built-in user credentials for development
+- **SQLite Database**: Local persistent storage for user credentials
+- **User Registration**: Self-service account creation with duplicate-username prevention
+- **BCrypt Password Hashing**: Secure password storage
 - **MVC Architecture**: Clean separation of concerns with Spring MVC
 
 ## Technology Stack
@@ -15,6 +17,9 @@ This project demonstrates a secure web application using Spring Boot with the fo
 - **Java Version**: 25
 - **Spring Boot**: 4.1.0
 - **Spring Security**: Latest (via Spring Boot)
+- **Spring Data JPA**: Database access via Hibernate ORM
+- **SQLite**: Lightweight local database (`webapp.db`)
+- **Hibernate Community Dialects**: SQLiteDialect for Hibernate 7.x
 - **Thymeleaf**: Latest with Spring Security extras
 - **Build Tool**: Gradle
 - **Testing**: JUnit Platform
@@ -27,24 +32,35 @@ WebApp/
 │   ├── main/
 │   │   ├── java/
 │   │   │   └── com/secure/WebApp/
-│   │   │       ├── WebAppApplication.java      # Main Spring Boot application entry point
-│   │   │       ├── WebSecurityConfig.java      # Security configuration and authentication
-│   │   │       └── MvcConfig.java              # MVC view controller configuration
+│   │   │       ├── WebAppApplication.java          # Main Spring Boot application entry point
+│   │   │       ├── WebSecurityConfig.java          # Security configuration
+│   │   │       ├── MvcConfig.java                  # MVC view controller configuration
+│   │   │       ├── controller/
+│   │   │       │   └── RegistrationController.java # User registration endpoints
+│   │   │       ├── model/
+│   │   │       │   └── User.java                   # JPA entity for users table
+│   │   │       ├── repository/
+│   │   │       │   └── UserRepository.java         # Spring Data JPA repository
+│   │   │       └── service/
+│   │   │           ├── CustomUserDetailsService.java # Spring Security UserDetailsService impl
+│   │   │           └── UserRegistrationService.java  # Registration business logic
 │   │   └── resources/
-│   │       ├── application.properties          # Application configuration
+│   │       ├── application.properties              # Application & database configuration
 │   │       └── templates/
-│   │           ├── home.html                   # Home page
-│   │           ├── hello.html                  # Hello page
-│   │           └── login.html                  # Login page
+│   │           ├── home.html                       # Home page
+│   │           ├── hello.html                      # Authenticated greeting page
+│   │           ├── login.html                      # Login page
+│   │           └── register.html                   # Registration page
 │   └── test/
 │       └── java/
 │           └── com/secure/WebApp/
-│               └── WebAppApplicationTests.java # Application tests
+│               └── WebAppApplicationTests.java     # Application tests
 ├── gradle/
-│   └── wrapper/                                # Gradle wrapper configuration
-├── build.gradle                                # Gradle build configuration
-├── settings.gradle                             # Gradle settings
-└── README.md                                   # This file
+│   └── wrapper/                                    # Gradle wrapper configuration
+├── build.gradle                                    # Gradle build configuration
+├── settings.gradle                                 # Gradle settings
+├── .gitignore                                      # Git ignore rules (includes *.db)
+└── README.md                                       # This file
 ```
 
 ## Getting Started
@@ -74,30 +90,45 @@ gradle build
 gradle bootRun
 ```
 
-The application will start on `http://localhost:8080` by default.
+The application will start on `http://localhost:9000`.
 
 ## Configuration
 
 ### Application Properties
 
 - **Application Name**: WebApp
+- **Server Port**: 9000
+- **Database**: SQLite (`webapp.db` created in project root at runtime)
+- **Schema Management**: `ddl-auto=update` (auto-creates/updates tables)
 - Configuration file: `src/main/resources/application.properties`
+
+### Database
+
+The application uses a local SQLite database file (`webapp.db`) that is automatically created on first run. The `users` table schema:
+
+| Column   | Type    | Constraints        |
+|----------|---------|--------------------|
+| id       | INTEGER | Primary key, auto-increment |
+| username | TEXT    | Unique, not null   |
+| password | TEXT    | Not null (BCrypt hash) |
+| role     | TEXT    | Not null (default: `USER`) |
+
+The database file is excluded from version control via `.gitignore`.
 
 ### Security Configuration
 
 The application includes the following security features:
 
 #### Authentication
-- **Type**: In-Memory Authentication (development configuration)
-- **Default User Credentials**:
-  - Username: `user`
-  - Password: `password`
+- **Type**: Database-backed authentication via SQLite
 - **Password Encoding**: BCryptPasswordEncoder
+- **User Registration**: Self-service via `/register`
 
 #### Authorization Rules
 - **Public Routes** (no authentication required):
   - `/` (root path)
   - `/home` (home page)
+  - `/register` (registration page)
 - **Protected Routes** (authentication required):
   - `/hello`
   - Any other routes not explicitly permitted
@@ -107,26 +138,30 @@ The application includes the following security features:
 - Form-based login
 - Logout functionality with logout confirmation
 - Spring Security Thymeleaf extras for secure template rendering
+- Client-side password confirmation on registration form
 
 ## Available Routes
 
-The application provides the following view controllers:
-
-| Route | View | Description | Authentication |
-|-------|------|-------------|-----------------|
-| `/` | home | Root/home page | Public |
-| `/home` | home | Home page | Public |
-| `/hello` | hello | Hello page | Protected |
-| `/login` | login | Login page | Public |
+| Route       | View     | Description              | Authentication |
+|-------------|----------|--------------------------|----------------|
+| `/`         | home     | Root/home page           | Public         |
+| `/home`     | home     | Home page                | Public         |
+| `/hello`    | hello    | Authenticated greeting   | Protected      |
+| `/login`    | login    | Login page               | Public         |
+| `/register` | register | User registration page   | Public         |
 
 ## Dependencies
 
 ### Core Dependencies
 
 ```gradle
+- org.springframework.boot:spring-boot-starter-web
 - org.springframework.boot:spring-boot-starter-security
 - org.springframework.boot:spring-boot-starter-thymeleaf
 - org.thymeleaf.extras:thymeleaf-extras-springsecurity6
+- org.springframework.boot:spring-boot-starter-data-jpa
+- org.xerial:sqlite-jdbc:3.49.1.0
+- org.hibernate.orm:hibernate-community-dialects:7.0.0.Final
 ```
 
 ### Test Dependencies
@@ -157,23 +192,21 @@ Tests are configured to use JUnit Platform.
 ### Security Configuration
 
 - **Location**: `src/main/java/com/secure/WebApp/WebSecurityConfig.java`
-- **Purpose**: Defines security policies, authentication, and password encoding
+- **Purpose**: Defines security policies, authorization rules, and password encoding
+
+### Registration Flow
+
+1. User navigates to `/register`
+2. Fills in username, password, and password confirmation
+3. Client-side validation checks password match
+4. Server-side validation checks for empty fields and duplicate usernames
+5. Password is BCrypt-encoded and user is persisted to SQLite
+6. User is redirected to `/login?registered` with a success message
 
 ### MVC Configuration
 
 - **Location**: `src/main/java/com/secure/WebApp/MvcConfig.java`
-- **Purpose**: Registers view controllers for template mapping
-
-## Default Login Credentials (Development Only)
-
-For local development and testing, the following credentials are available:
-
-```
-Username: user
-Password: password
-```
-
-**Note**: These are hardcoded in-memory credentials and should be replaced with a proper authentication mechanism (e.g., database-backed authentication) for production use.
+- **Purpose**: Registers view controllers for simple template mappings (`/home`, `/`, `/hello`, `/login`)
 
 ## Project Metadata
 
